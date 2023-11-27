@@ -19,26 +19,32 @@ def check_home_away(play):
 
 skip = []
 
+
+pc.execute(f'DROP TABLE IF EXISTS pbp')
+pc.execute(f'''CREATE TABLE pbp (
+                playid INTEGER,
+                gameid INTEGER,
+                time INTEGER,
+                description TEXT,
+                home_score INTEGER,
+                away_score INTEGER,
+                scoring_play INTEGER,
+                who INTEGER,
+                possession INTEGER,
+                home_fgm INTEGER,
+                home_fga INTEGER,
+                home_3pm INTEGER,
+                home_3pa INTEGER,
+                home_ftm INTEGER,
+                home_fta INTEGER,
+                away_fgm INTEGER,
+                away_fga INTEGER,
+                away_3pm INTEGER,
+                away_3pa INTEGER,
+                away_ftm INTEGER,
+                away_fta INTEGER)''')
+
 for gameid in ids:
-    pc.execute(f'DROP TABLE IF EXISTS game_{gameid}')
-    pc.execute(f'''CREATE TABLE game_{gameid} (time INTEGER,
-                 home_score INTEGER,
-                 away_score INTEGER,
-                 scoring_play INTEGER,
-                 who INTEGER,
-                 possession INTEGER,
-                 home_fgm INTEGER,
-                 home_fga INTEGER,
-                 home_3pm INTEGER,
-                 home_3pa INTEGER,
-                 home_ftm INTEGER,
-                 home_fta INTEGER,
-                 away_fgm INTEGER,
-                 away_fga INTEGER,
-                 away_3pm INTEGER,
-                 away_3pa INTEGER,
-                 away_ftm INTEGER,
-                 away_fta INTEGER)''')
     if os.path.exists(f'data/pbp/{gameid}_raw'):
         with open(f'data/pbp/{gameid}_raw', 'r') as f:
             #get json embedded in html - find first instance of '{ and last instance of }'
@@ -191,7 +197,7 @@ for gameid in ids:
                                 away_fga += 1
                     #populate table with play
                     if not stoppage:
-                        pc.execute(f'''INSERT OR IGNORE INTO game_{gameid} VALUES ({time_segment},
+                        pc.execute(f'''INSERT OR IGNORE INTO pbp VALUES ({id},{gameid},{time_segment},
                                     {home_score},
                                     {away_score},
                                     {scoring_play},
