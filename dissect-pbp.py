@@ -24,7 +24,9 @@ pc.execute(f'DROP TABLE IF EXISTS pbp')
 pc.execute(f'''CREATE TABLE pbp (
                 playid INTEGER,
                 gameid INTEGER,
-                time INTEGER,
+                time_interval INTEGER,
+                time_minutes INTEGER,
+                time_seconds INTEGER,
                 description TEXT,
                 home_score INTEGER,
                 away_score INTEGER,
@@ -43,7 +45,7 @@ pc.execute(f'''CREATE TABLE pbp (
                 away_3pa INTEGER,
                 away_ftm INTEGER,
                 away_fta INTEGER)''')
-
+n=0
 for gameid in ids:
     if os.path.exists(f'data/pbp/{gameid}_raw'):
         with open(f'data/pbp/{gameid}_raw', 'r') as f:
@@ -85,7 +87,7 @@ for gameid in ids:
                         half = play['period']['number']
                         time_minutes = int(play['clock']['displayValue'].split(':')[0])
                         time_seconds = int(play['clock']['displayValue'].split(':')[1])
-                        time_total = time_minutes*60 + time_seconds + (half-1)*1200
+                        time_total = time_minutes*60 + time_seconds + (1-(half//2))*1200
                         #subdivide last 30 seconds into 3 segments
                         if half == 2 and time_total >= (2400-30):
                             time_segment = int(floor((2400-time_total)/10))
@@ -196,28 +198,19 @@ for gameid in ids:
                             else:
                                 away_fga += 1
                     #populate table with play
-                    if not stoppage:
-                        pc.execute(f'''INSERT OR IGNORE INTO pbp VALUES ({id},{gameid},{time_segment},
-                                    {home_score},
-                                    {away_score},
-                                    {scoring_play},
-                                    {home_away},
-                                    {possession},
-                                    {home_fgm},
-                                    {home_fga},
-                                    {home_3pm},
-                                    {home_3pa},
-                                    {home_ftm},
-                                    {home_fta},
-                                    {away_fgm},
-                                    {away_fga},
-                                    {away_3pm},
-                                    {away_3pa},
-                                    {away_ftm},
-                                    {away_fta})''')
-                        conn.commit()
+                        if not stoppage:
+                            pc.execute('''INSERT INTO pbp VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                        (id, gameid, time_segment,time_minutes,time_seconds, ptext, home_score, away_score, scoring_play, home_away, possession,
+                                        home_fgm, home_fga, home_3pm, home_3pa, home_ftm, home_fta, away_fgm, away_fga, away_3pm, away_3pa,
+                                        away_ftm, away_fta))
+                            
+                            n += 1
+                            if n % 1000 == 0:
+                                print(n)
 
+print(n)
 for id in skip:
     print("removing " + str(id))
     cg.execute(f'DELETE FROM games WHERE id={id}')
-    pc.execute(f'DROP TABLE game_{id}')
+conn.commit()
+conn.close()
