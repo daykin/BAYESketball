@@ -39,12 +39,18 @@ pc.execute(f'''CREATE TABLE pbp (
                 home_3pa INTEGER,
                 home_ftm INTEGER,
                 home_fta INTEGER,
+                home_oreb INTEGER,
+                home_to INTEGER,
+                home_possessions REAL,
                 away_fgm INTEGER,
                 away_fga INTEGER,
                 away_3pm INTEGER,
                 away_3pa INTEGER,
                 away_ftm INTEGER,
-                away_fta INTEGER)''')
+                away_fta INTEGER,
+                away_oreb INTEGER,
+                away_to INTEGER,
+                away_possessions REAL)''')
 n=0
 for gameid in ids:
     if os.path.exists(f'data/pbp/{gameid}_raw'):
@@ -78,6 +84,12 @@ for gameid in ids:
                 home_fta = 0
                 away_ftm = 0
                 away_fta = 0
+                home_oreb = 0
+                away_oreb = 0
+                home_to = 0
+                away_to = 0
+                home_possessions = 0.0
+                away_possessions = 0.0
                 for half in range(2):
                     h = pbp[half]
                     for play_zip in enumerate(h):
@@ -87,10 +99,10 @@ for gameid in ids:
                         half = play['period']['number']
                         time_minutes = int(play['clock']['displayValue'].split(':')[0])
                         time_seconds = int(play['clock']['displayValue'].split(':')[1])
-                        time_total = time_minutes*60 + time_seconds + (1-(half//2))*1200
+                        time_total = time_minutes*60 + time_seconds + ((1-(half//2))*1200)
                         #subdivide last 30 seconds into 3 segments
-                        if half == 2 and time_total >= (2400-30):
-                            time_segment = int(floor((2400-time_total)/10))
+                        if time_total <= 30:
+                            time_segment = 81 - time_total//10
                         else:
                             time_segment = int(floor((2400-time_total)/30))
                         home_score = int(play['homeScore'])
@@ -107,6 +119,7 @@ for gameid in ids:
                             continue
                         #determine resulting possession
                         #Home_away got ball
+                        # Use KenPom possession formula: (FGA – OR) + TO + (.475 * FTA)
                         try:
                             ptext = play['text'].lower()
                         except KeyError:
@@ -119,12 +132,19 @@ for gameid in ids:
                                 possession = HOME
                             else:
                                 possession = AWAY
+                            if 'offensive' in ptext:
+                                if home_away == HOME:
+                                    home_oreb += 1
+                                else:
+                                    away_oreb += 1
                         #home_away gave away ball
                         elif('turnover' in ptext):
                             if home_away == HOME:
                                 possession = AWAY
+                                home_to += 1
                             else:
                                 possession = HOME
+                                away_to += 1
                         #home_away got ball
                         elif('steal' in ptext):
                             if home_away == HOME:
@@ -199,10 +219,12 @@ for gameid in ids:
                                 away_fga += 1
                     #populate table with play
                         if not stoppage:
-                            pc.execute('''INSERT INTO pbp VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            home_possessions = (home_fga - home_oreb + home_to + 0.45*home_fta)
+                            away_possessions = (away_fga - away_oreb + away_to + 0.45*away_fta)
+                            pc.execute('''INSERT INTO pbp VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                                         (id, gameid, time_segment,time_minutes,time_seconds, ptext, home_score, away_score, scoring_play, home_away, possession,
-                                        home_fgm, home_fga, home_3pm, home_3pa, home_ftm, home_fta, away_fgm, away_fga, away_3pm, away_3pa,
-                                        away_ftm, away_fta))
+                                        home_fgm, home_fga, home_3pm, home_3pa, home_ftm, home_fta, home_oreb, home_to, home_possessions, away_fgm, away_fga, away_3pm, away_3pa,
+                                        away_ftm, away_fta, away_oreb, away_to, away_possessions))
                             
                             n += 1
                             if n % 1000 == 0:
