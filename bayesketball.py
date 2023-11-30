@@ -88,23 +88,8 @@ for game_ in games.head(5).iterrows():
                 away_efficiency_margin = pm.Normal('away_adjem', mu=away_adjem_priors[interval-1], sd=sigma_adjem_0*time_decay)
                 home_tempo = pm.Normal('tempo', mu=home_tempo_priors[interval-1], sd=sigma_tempo_0*time_decay)
                 away_tempo = pm.Normal('tempo', mu=away_tempo_priors[interval-1], sd=sigma_tempo_0*time_decay)
-                lambda_home_possessions_per_interval = pm.Deterministic('lambda_home_possessions', home_tempo*(82-interval)/82)
-                lambda_away_possessions_per_interval = pm.Deterministic('lambda_away_possessions', away_tempo*(82-interval)/82)
-                home_xPointsPerPossession = pm.Deterministic('home_xPointsPerPossession', home_efficiency_margin/100)
-                away_xPointsPerPossession = pm.Deterministic('away_xPointsPerPossession', away_efficiency_margin/100)
-
-                # Update estimated tempo: p(lambda_possessions|possessions this interval) = p(possessions this interval|lambda_possessions) * p(lambda_possessions)
-                possessions_this_interval = home_possessions_this_interval + away_possessions_this_interval
-                lambda_home_possessions_likelihood = pm.Poisson('lambda_home_possessions_likelihood', mu=lambda_home_possessions, observed=home_possessions_this_interval)
-                lambda_away_possessions_likelihood = pm.Poisson('lambda_away_possessions_likelihood', mu=lambda_away_possessions, observed=away_possessions_this_interval)
-                # Update efficiency margin: p(efficiency margin|points this interval) = p(points this interval|efficiency margin) * p(efficiency margin)
-                home_efficiency_margin_likelihood = pm.Normal('home_efficiency_margin_likelihood', mu=(home_xPointsPerPossession-away_xPointsPerPossession)*(82-interval), sd=sigma_adjem_0*time_decay, observed=home_score_this_interval)
-                away_efficiency_margin_likelihood = pm.Normal('away_efficiency_margin_likelihood', mu=(away_xPointsPerPossession-home_xPointsPerPossession)*(82-interval), sd=sigma_adjem_0*time_decay, observed=away_score_this_interval)
-                # Likelihood: p(points this interval|efficiency margin) = Poisson(points this interval, lambda=lambda_points)
-                lambda_points = (home_xPointsPerPossession - away_xPointsPerPossession) * possessions_this_interval
-                points_likelihood = pm.Poisson('points_likelihood', mu=lambda_points, observed=points_this_interval)
-
-
-
-
                 
+                #Prior tempo starts as harmonic mean of KenPom tempos divided by 82 intervals 
+                #Likelihood: poisson regression on lambda: 
+                # X_i = possessions in a given interval by similar teams against similar opponents
+                #Posterior: Negative-binomial(alpha = possessions remaining, beta = 82-interval)
