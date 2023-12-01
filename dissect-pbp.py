@@ -102,9 +102,9 @@ for gameid in ids:
                         time_total = time_minutes*60 + time_seconds + ((1-(half//2))*1200)
                         #subdivide last 30 seconds into 3 segments
                         if time_total <= 30:
-                            time_segment = 81 - time_total//10
+                            time_segment = 41 - time_total//10
                         else:
-                            time_segment = int(floor((2400-time_total)/30))
+                            time_segment = int(floor((2400-time_total)/60))
                         home_score = int(play['homeScore'])
                         away_score = int(play['awayScore'])
                         scoring_play = 0
